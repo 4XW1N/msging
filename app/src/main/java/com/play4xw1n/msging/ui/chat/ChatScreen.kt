@@ -72,7 +72,7 @@ private val AvatarPalette = listOf(
 
 @Composable
 fun ChatScreen(conversationId: String, contactName: String, userName: String, isGroup: Boolean = false, onBack: () -> Unit) {
-    val viewModel: ChatViewModel = viewModel(factory = ChatViewModel.factory(conversationId, contactName, isGroup))
+    val viewModel: ChatViewModel = viewModel(key = conversationId, factory = ChatViewModel.factory(conversationId, contactName, isGroup))
     val messages by viewModel.messages.collectAsState()
     val connected by viewModel.connected.collectAsState()
     var input by remember { mutableStateOf("") }
@@ -105,8 +105,7 @@ fun ChatScreen(conversationId: String, contactName: String, userName: String, is
                 enabled = connected,
                 onValueChange = { input = it },
                 onSend = {
-                    val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: userName
-                    viewModel.send(uid, input)
+                    viewModel.send(userName, input)
                     input = ""
                 }
             )
