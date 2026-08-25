@@ -1,5 +1,8 @@
 package com.play4xw1n.msging.ui.auth
 
+import android.app.Activity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -13,10 +16,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -38,7 +43,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.UserProfileChangeRequest
 import java.util.regex.Pattern
 
@@ -50,20 +59,56 @@ private val SubtleText = Color(0xFF8A93A6)
 
 @Composable
 fun AuthRoot() {
-    var showSignUp by rememberSaveable { mutableStateOf(false) }
-    if (showSignUp) {
-        SignUpScreen(onSwitchToLogin = { showSignUp = false })
-    } else {
-        LoginScreen(onSwitchToSignUp = { showSignUp = true })
+    var screen by rememberSaveable { mutableStateOf("login") }
+    when (screen) {
+        "login" -> LoginScreen(
+            onSwitchToSignUp = { screen = "signup" },
+            onForgotPassword = { screen = "forgot" }
+        )
+        "signup" -> SignUpScreen(onSwitchToLogin = { screen = "login" })
+        "forgot" -> ForgotPasswordScreen(onBack = { screen = "login" })
     }
 }
 
 @Composable
-fun LoginScreen(onSwitchToSignUp: () -> Unit) {
+fun LoginScreen(onSwitchToSignUp: () -> Unit, onForgotPassword: () -> Unit) {
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val activity = remember { context as Activity }
+
+    val googleLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            try {
+                val account = task.getResult(ApiException::class.java)
+                val credential = GoogleAuthProvider.getCredential(account.idToken, null)
+                busy = true
+                error = null
+                FirebaseAuth.getInstance().signInWithCredential(credential)
+                    .addOnCompleteListener { r ->
+                        busy = false
+                        if (!r.isSuccessful) {
+                            error = r.exception?.localizedMessage ?: "Google sign-in failed"
+                        }
+                    }
+            } catch (e: ApiException) {
+                error = "Google sign-in cancelled"
+            }
+        }
+    }
+
+    fun googleSignIn() {
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken("134747393798-mlq4mhj6gfv0n3a3qbdl7k4k41ibodig.apps.googleusercontent.com")
+            .requestEmail()
+            .build()
+        googleLauncher.launch(GoogleSignIn.getClient(activity, gso).signInIntent)
+    }
 
     fun submit() {
         if (busy) return
@@ -92,10 +137,33 @@ fun LoginScreen(onSwitchToSignUp: () -> Unit) {
         AuthField(value = email, onValueChange = { email = it }, label = "Email", isPassword = false)
         Spacer(Modifier.height(12.dp))
         AuthField(value = password, onValueChange = { password = it }, label = "Password", isPassword = true)
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            "Forgot password?",
+            color = MaterialTheme.colorScheme.primary,
+            fontSize = 13.sp,
+            modifier = Modifier.fillMaxWidth().clickable { onForgotPassword() },
+            textAlign = androidx.compose.ui.text.style.TextAlign.End
+        )
+        Spacer(Modifier.height(16.dp))
 
         GradientButton(text = if (busy) "Signing in…" else "Sign in", enabled = !busy) { submit() }
 
+        Spacer(Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Divider(modifier = Modifier.weight(1f), color = Color(0xFF2A2D36))
+            Text("  or  ", color = SubtleText, fontSize = 12.sp)
+            Divider(modifier = Modifier.weight(1f), color = Color(0xFF2A2D36))
+        }
+        Spacer(Modifier.height(16.dp))
+
+        GoogleSignInButton(enabled = !busy) { googleSignIn() }
+
+        Spacer(Modifier.height(16.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center
@@ -176,6 +244,63 @@ fun SignUpScreen(onSwitchToLogin: () -> Unit) {
 }
 
 @Composable
+fun ForgotPasswordScreen(onBack: () -> Unit) {
+    var email by rememberSaveable { mutableStateOf("") }
+    var sent by rememberSaveable { mutableStateOf(false) }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    fun submit() {
+        if (busy) return
+        if (!Pattern.compile("^[^@\\s]+@[^@\\s]+$").matcher(email).matches()) {
+            error = "Enter a valid email"
+            return
+        }
+        busy = true
+        error = null
+        FirebaseAuth.getInstance().sendPasswordResetEmail(email.trim())
+            .addOnCompleteListener { result ->
+                busy = false
+                if (result.isSuccessful) {
+                    sent = true
+                } else {
+                    error = result.exception?.localizedMessage?.replace("com.google.firebase.", "")
+                        ?: "Failed to send reset email"
+                }
+            }
+    }
+
+    AuthScaffold(title = "Reset password", subtitle = "Enter your email to receive a reset link") {
+        if (sent) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Reset link sent! Check your inbox.",
+                color = Color(0xFF69F0AE),
+                fontSize = 14.sp,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(20.dp))
+            GradientButton(text = "Back to sign in", enabled = true) { onBack() }
+        } else {
+            AuthField(value = email, onValueChange = { email = it }, label = "Email", isPassword = false)
+            Spacer(Modifier.height(20.dp))
+
+            GradientButton(text = if (busy) "Sending…" else "Send reset link", enabled = !busy) { submit() }
+
+            Spacer(Modifier.height(12.dp))
+            Text(
+                "Back to sign in",
+                color = MaterialTheme.colorScheme.primary,
+                fontSize = 13.sp,
+                modifier = Modifier.clickable { onBack() }
+            )
+        }
+    }
+
+    ErrorBanner(error)
+}
+
+@Composable
 private fun AuthScaffold(title: String, subtitle: String, content: @Composable () -> Unit) {
     Column(
         modifier = Modifier
@@ -194,7 +319,7 @@ private fun AuthScaffold(title: String, subtitle: String, content: @Composable (
                 .background(AccentGradient),
             contentAlignment = Alignment.Center
         ) {
-                        Text("M", color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Bold)
+            Text("M", color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(Modifier.height(14.dp))
         Text("msging", color = Color.White, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
@@ -236,6 +361,33 @@ private fun GradientButton(text: String, enabled: Boolean, onClick: () -> Unit) 
         contentAlignment = Alignment.Center
     ) {
         Text(text, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+    }
+}
+
+@Composable
+private fun GoogleSignInButton(enabled: Boolean, onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(enabled = enabled) { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        color = Color(0xFF1D232E)
+    ) {
+        Row(
+            modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Text("G", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Spacer(Modifier.width(10.dp))
+            Text(
+                "Continue with Google",
+                color = Color(0xFFB0B8C8),
+                fontWeight = FontWeight.Medium,
+                fontSize = 14.sp
+            )
+        }
     }
 }
 
