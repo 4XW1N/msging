@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
+import com.play4xw1n.msging.fcm.FcmTokenManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -52,7 +53,9 @@ class AppViewModel : ViewModel() {
                 "email" to user.email.orEmpty(),
                 "isOnline" to true
             )
-        )
+        ).addOnSuccessListener {
+            FcmTokenManager.saveTokenOnLogin()
+        }
     }
 
     fun navigateTo(screen: Screen) {
@@ -71,6 +74,14 @@ class AppViewModel : ViewModel() {
 
     fun navigateBack() {
         _currentScreen.value = Screen.Home
+    }
+
+    fun handleNotificationIntent(chatRoomId: String, chatName: String, isGroup: Boolean) {
+        if (isGroup) {
+            _currentScreen.value = Screen.Chat(chatRoomId, chatName, isGroup = true)
+        } else {
+            _currentScreen.value = Screen.Chat(chatRoomId, chatName, isGroup = false)
+        }
     }
 
     fun pendingEmail(): String = auth.currentUser?.email.orEmpty()

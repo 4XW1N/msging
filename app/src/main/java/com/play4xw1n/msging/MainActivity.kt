@@ -1,16 +1,16 @@
 ﻿package com.play4xw1n.msging
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.graphics.Color
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.play4xw1n.msging.ui.AppViewModel
 import com.play4xw1n.msging.ui.AuthStep
 import com.play4xw1n.msging.ui.Screen
@@ -34,12 +34,20 @@ private val AppColors = darkColorScheme(
 )
 
 class MainActivity : ComponentActivity() {
+
+    private var pendingNotification: Intent? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        pendingNotification = intent
         setContent {
             MaterialTheme(colorScheme = AppColors) {
                 Surface(color = AppColors.background) {
                     val appViewModel: AppViewModel = viewModel()
+
+                    pendingNotification?.let { handleNotificationIntent(it, appViewModel) }
+                    pendingNotification = null
+
                     val step by appViewModel.step.collectAsState()
                     val currentScreen by appViewModel.currentScreen.collectAsState()
 
@@ -92,6 +100,20 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        pendingNotification = intent
+    }
+
+    private fun handleNotificationIntent(intent: Intent?, appViewModel: AppViewModel) {
+        if (intent?.getBooleanExtra("navigateToChat", false) == true) {
+            val roomId = intent.getStringExtra("chatRoomId") ?: return
+            val roomName = intent.getStringExtra("chatName") ?: ""
+            val isGroup = intent.getBooleanExtra("isGroup", false)
+            appViewModel.handleNotificationIntent(roomId, roomName, isGroup)
         }
     }
 }

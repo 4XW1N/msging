@@ -11,3 +11,4 @@ build/
 .kotlin/
 google-services.json
 release.keystore
+functions/node_modules/
