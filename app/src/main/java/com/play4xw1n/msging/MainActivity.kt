@@ -19,6 +19,7 @@ import com.play4xw1n.msging.ui.auth.VerifyEmailScreen
 import com.play4xw1n.msging.ui.chat.ChatScreen
 import com.play4xw1n.msging.ui.contacts.NewChatScreen
 import com.play4xw1n.msging.ui.home.HomeScreen
+import androidx.compose.runtime.key
 
 private val AppColors = darkColorScheme(
     primary = Color(0xFF8B7CFF),
@@ -72,13 +73,15 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onSignOut = appViewModel::signOut
                                 )
-                                is Screen.Chat -> ChatScreen(
-                                    conversationId = (currentScreen as Screen.Chat).conversationId,
-                                    contactName = (currentScreen as Screen.Chat).contactName,
-                                    userName = appViewModel.displayName(),
-                                    isGroup = (currentScreen as Screen.Chat).isGroup,
-                                    onBack = appViewModel::navigateBack
-                                )
+                                is Screen.Chat -> key((currentScreen as Screen.Chat).conversationId) {
+                                    ChatScreen(
+                                        conversationId = (currentScreen as Screen.Chat).conversationId,
+                                        contactName = (currentScreen as Screen.Chat).contactName,
+                                        userName = appViewModel.displayName(),
+                                        isGroup = (currentScreen as Screen.Chat).isGroup,
+                                        onBack = appViewModel::navigateBack
+                                    )
+                                }
                                 is Screen.NewChat -> NewChatScreen(
                                     onBack = appViewModel::navigateBack,
                                     onUserClick = { userId, userName ->
