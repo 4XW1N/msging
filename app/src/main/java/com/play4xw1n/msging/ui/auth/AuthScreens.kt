@@ -104,7 +104,7 @@ fun LoginScreen(onSwitchToSignUp: () -> Unit, onForgotPassword: () -> Unit) {
 
     fun googleSignIn() {
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken("134747393798-mlq4mhj6gfv0n3a3qbdl7k4k41ibodig.apps.googleusercontent.com")
+            .requestIdToken("134747393798-gpv8kfqn1cmsmvrcbvbl2591bmfoip0p.apps.googleusercontent.com")
             .requestEmail()
             .build()
         googleLauncher.launch(GoogleSignIn.getClient(activity, gso).signInIntent)

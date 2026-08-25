@@ -27,12 +27,11 @@ object UpdateChecker {
             val response = URL(API_URL).readText()
             val json = org.json.JSONObject(response)
 
-            val tagName = json.getString("tag_name").removePrefix("v")
+            val tagName = json.getString("tag_name")
             val releaseNotes = json.getString("body")
-
+            val latestVersion = parseVersionCode(tagName.removePrefix("v"))
             val assets = json.getJSONArray("assets")
             var apkUrl: String? = null
-
             for (i in 0 until assets.length()) {
                 val asset = assets.getJSONObject(i)
                 if (asset.getString("name").endsWith(".apk")) {
@@ -40,10 +39,8 @@ object UpdateChecker {
                     break
                 }
             }
-
             if (apkUrl == null) return@withContext null
 
-            val latestVersion = parseVersionCode(tagName)
             if (latestVersion > currentVersion) {
                 UpdateInfo(
                     versionName = tagName,
@@ -61,25 +58,14 @@ object UpdateChecker {
 
     private fun getCurrentVersionCode(context: Context): Int {
         return try {
-            context.packageManager.getPackageInfo(context.packageName, 0)
-                .let { it::class.java.getField("longVersionCode").get(it) as Long }.toInt()
+            @Suppress("DEPRECATION")
+            context.packageManager.getPackageInfo(context.packageName, 0).versionCode
         } catch (_: Exception) {
-            try {
-                @Suppress("DEPRECATION")
-                context.packageManager.getPackageInfo(context.packageName, 0).versionCode
-            } catch (_: Exception) {
-                0
-            }
+            0
         }
     }
 
     private fun parseVersionCode(version: String): Int {
-        val parts = version.split(".")
-        return when {
-            parts.size >= 3 -> parts[0].toInt() * 10000 + parts[1].toInt() * 100 + parts[2].toInt()
-            parts.size == 2 -> parts[0].toInt() * 100 + parts[1].toInt()
-            parts.size == 1 -> parts[0].toInt()
-            else -> 0
-        }
+        return try { version.toInt() } catch (_: Exception) { 0 }
     }
 }
