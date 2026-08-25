@@ -83,7 +83,8 @@ fun HomeScreen(
     onNewChatClick: () -> Unit,
     onSignOut: () -> Unit
 ) {
-    val viewModel: HomeViewModel = viewModel(factory = HomeViewModel.factory())
+    val userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: ""
+    val viewModel: HomeViewModel = viewModel(key = userId, factory = HomeViewModel.factory())
     val conversations by viewModel.conversations.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
     val context = LocalContext.current

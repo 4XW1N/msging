@@ -19,4 +19,8 @@ object UserCache {
         if (!::prefs.isInitialized || uid.isBlank() || name.isBlank()) return
         prefs.edit().putString("name_$uid", name).apply()
     }
+
+    fun clear() {
+        if (::prefs.isInitialized) prefs.edit().clear().apply()
+    }
 }

@@ -12,6 +12,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.play4xw1n.msging.fcm.FcmTokenManager
 import com.play4xw1n.msging.service.MessageListenerService
 import com.play4xw1n.msging.service.ServiceKeepAliveWorker
+import com.play4xw1n.msging.data.UserCache
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -136,8 +137,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun signOut() {
         stopBackgroundService()
-        auth.currentUser?.let { user ->
-            db.collection("users").document(user.uid).update("isOnline", false)
+        val oldUserId = auth.currentUser?.uid
+        oldUserId?.let { uid ->
+            db.collection("users").document(uid).update("isOnline", false)
+        }
+        UserCache.clear()
+        oldUserId?.let { uid ->
+            getApplication<Application>()
+                .getSharedPreferences("msging_notification_prefs", android.content.Context.MODE_PRIVATE)
+                .edit().clear().apply()
         }
         _currentScreen.value = Screen.Home
         auth.signOut()
