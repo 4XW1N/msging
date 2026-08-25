@@ -1,0 +1,112 @@
+﻿package com.play4xw1n.msging.ui
+
+import androidx.lifecycle.ViewModel
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+
+sealed interface AuthStep {
+    data object SignedOut : AuthStep
+    data object NeedsVerification : AuthStep
+    data class SignedIn(val displayName: String) : AuthStep
+}
+
+sealed interface Screen {
+    data object Home : Screen
+    data class Chat(val conversationId: String, val contactName: String, val isGroup: Boolean = false) : Screen
+    data object NewChat : Screen
+    data object GroupCreator : Screen
+}
+
+class AppViewModel : ViewModel() {
+
+    private val auth = FirebaseAuth.getInstance()
+    private val db = FirebaseFirestore.getInstance()
+
+    private val _step = MutableStateFlow(computeStep(auth.currentUser))
+    val step: StateFlow<AuthStep> = _step
+
+    private val _currentScreen = MutableStateFlow<Screen>(Screen.Home)
+    val currentScreen: StateFlow<Screen> = _currentScreen
+
+    init {
+        auth.addAuthStateListener { listener ->
+            val user = listener.currentUser
+            _step.value = computeStep(user)
+            if (user != null && user.isEmailVerified) {
+                registerUserInFirestore(user)
+            }
+        }
+    }
+
+    private fun registerUserInFirestore(user: FirebaseUser) {
+        val name = user.displayName?.takeIf { it.isNotBlank() }
+            ?: user.email?.substringBefore("@")
+            ?: "user"
+        com.play4xw1n.msging.data.UserCache.put(user.uid, name)
+        db.collection("users").document(user.uid).set(
+            mapOf(
+                "name" to name,
+                "email" to user.email.orEmpty(),
+                "isOnline" to true
+            )
+        )
+    }
+
+    fun navigateTo(screen: Screen) {
+        _currentScreen.value = screen
+    }
+
+    fun navigateToChat(otherUserId: String, otherUserName: String) {
+        val myId = auth.currentUser?.uid.orEmpty()
+        val conversationId = if (myId < otherUserId) "${myId}_${otherUserId}" else "${otherUserId}_${myId}"
+        _currentScreen.value = Screen.Chat(conversationId, otherUserName, isGroup = false)
+    }
+
+    fun openGroupChat(groupId: String, groupName: String) {
+        _currentScreen.value = Screen.Chat(groupId, groupName, isGroup = true)
+    }
+
+    fun navigateBack() {
+        _currentScreen.value = Screen.Home
+    }
+
+    fun pendingEmail(): String = auth.currentUser?.email.orEmpty()
+
+    fun displayName(): String = (_step.value as? AuthStep.SignedIn)?.displayName ?: "user"
+
+    fun checkVerification(onResult: (Boolean) -> Unit) {
+        val user = auth.currentUser ?: run { onResult(false); return }
+        user.reload().addOnCompleteListener {
+            _step.value = computeStep(user)
+            onResult(user.isEmailVerified)
+        }
+    }
+
+    fun resendVerificationEmail(onResult: (Boolean) -> Unit) {
+        val user = auth.currentUser ?: run { onResult(false); return }
+        user.sendEmailVerification().addOnCompleteListener { onResult(it.isSuccessful) }
+    }
+
+    fun signOut() {
+        auth.currentUser?.let { user ->
+            db.collection("users").document(user.uid).update("isOnline", false)
+        }
+        _currentScreen.value = Screen.Home
+        auth.signOut()
+    }
+
+    private companion object {
+        fun computeStep(user: FirebaseUser?): AuthStep = when {
+            user == null -> AuthStep.SignedOut
+            !user.isEmailVerified -> AuthStep.NeedsVerification
+            else -> AuthStep.SignedIn(
+                user.displayName?.takeIf { it.isNotBlank() }
+                    ?: user.email?.substringBefore("@")
+                    ?: "user"
+            )
+        }
+    }
+}
