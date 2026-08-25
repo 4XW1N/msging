@@ -45,6 +45,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontStyle
+import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -210,7 +211,7 @@ private fun DayChip(label: String) {
 
 @Composable
 private fun MessageRow(message: Message, myName: String, modifier: Modifier = Modifier) {
-    val mine = message.sender == myName
+    val mine = message.sender == FirebaseAuth.getInstance().currentUser?.uid
     val time = remember(message.timestamp) {
         SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(message.timestamp))
     }

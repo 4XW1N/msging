@@ -1,10 +1,17 @@
 ﻿package com.play4xw1n.msging.ui
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import android.content.Intent
+import android.os.Build
+import android.os.PowerManager
+import android.provider.Settings
+import androidx.lifecycle.AndroidViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import com.play4xw1n.msging.fcm.FcmTokenManager
+import com.play4xw1n.msging.service.MessageListenerService
+import com.play4xw1n.msging.service.ServiceKeepAliveWorker
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -21,7 +28,7 @@ sealed interface Screen {
     data object GroupCreator : Screen
 }
 
-class AppViewModel : ViewModel() {
+class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
@@ -38,8 +45,34 @@ class AppViewModel : ViewModel() {
             _step.value = computeStep(user)
             if (user != null && user.isEmailVerified) {
                 registerUserInFirestore(user)
+                startBackgroundService()
+            } else {
+                stopBackgroundService()
             }
         }
+    }
+
+    private fun startBackgroundService() {
+        val ctx = getApplication<Application>()
+        val pm = ctx.getSystemService(PowerManager::class.java)
+        if (!pm.isIgnoringBatteryOptimizations(ctx.packageName)) {
+            try {
+                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                    data = android.net.Uri.parse("package:${ctx.packageName}")
+                }
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                ctx.startActivity(intent)
+            } catch (_: Exception) { }
+        }
+        val intent = Intent(ctx, MessageListenerService::class.java)
+        ctx.startForegroundService(intent)
+        ServiceKeepAliveWorker.schedule(ctx)
+    }
+
+    private fun stopBackgroundService() {
+        val ctx = getApplication<Application>()
+        ctx.stopService(Intent(ctx, MessageListenerService::class.java))
+        ServiceKeepAliveWorker.cancel(ctx)
     }
 
     private fun registerUserInFirestore(user: FirebaseUser) {
@@ -102,6 +135,7 @@ class AppViewModel : ViewModel() {
     }
 
     fun signOut() {
+        stopBackgroundService()
         auth.currentUser?.let { user ->
             db.collection("users").document(user.uid).update("isOnline", false)
         }

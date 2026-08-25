@@ -92,10 +92,17 @@ fun HomeScreen(
         ActivityResultContracts.RequestPermission()
     ) { /* no-op, permission result handled by system */ }
 
-    val scope = rememberCoroutineScope()
-    val updateState by UpdateManager.state.collectAsState()
+    var updateChecked by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
+        if (!updateChecked) {
+            val info = UpdateChecker.checkForUpdate(context)
+            if (info != null) {
+                UpdateManager.onUpdateChecked(info)
+            }
+            updateChecked = true
+        }
+        // Existing permission logic
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED
@@ -103,9 +110,6 @@ fun HomeScreen(
                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
-        UpdateManager.checkForUpdate(context)
-        val info = UpdateChecker.checkForUpdate(context)
-        UpdateManager.onUpdateChecked(info)
     }
 
     val filteredConversations = remember(conversations, searchQuery) {
