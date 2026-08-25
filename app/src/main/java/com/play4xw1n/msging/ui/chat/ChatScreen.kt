@@ -105,7 +105,8 @@ fun ChatScreen(conversationId: String, contactName: String, userName: String, is
                 enabled = connected,
                 onValueChange = { input = it },
                 onSend = {
-                    viewModel.send(userName, input)
+                    val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: userName
+                    viewModel.send(uid, input)
                     input = ""
                 }
             )
@@ -211,7 +212,8 @@ private fun DayChip(label: String) {
 
 @Composable
 private fun MessageRow(message: Message, myName: String, modifier: Modifier = Modifier) {
-    val mine = message.sender == FirebaseAuth.getInstance().currentUser?.uid
+    val currentUid = FirebaseAuth.getInstance().currentUser?.uid
+    val mine = message.sender == currentUid || message.sender == myName
     val time = remember(message.timestamp) {
         SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(message.timestamp))
     }
