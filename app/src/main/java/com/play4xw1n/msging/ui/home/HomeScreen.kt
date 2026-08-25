@@ -44,6 +44,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,6 +60,10 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.play4xw1n.msging.data.Conversation
 import com.play4xw1n.msging.data.ConversationRepository
+import com.play4xw1n.msging.update.UpdateDialog
+import com.play4xw1n.msging.update.UpdateManager
+import com.play4xw1n.msging.update.UpdateChecker
+import kotlinx.coroutines.launch
 
 private val Bg = Color(0xFF0E1013)
 private val Card = Color(0xFF151A21)
@@ -87,6 +92,9 @@ fun HomeScreen(
         ActivityResultContracts.RequestPermission()
     ) { /* no-op, permission result handled by system */ }
 
+    val scope = rememberCoroutineScope()
+    val updateState by UpdateManager.state.collectAsState()
+
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
@@ -95,6 +103,9 @@ fun HomeScreen(
                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
+        UpdateManager.checkForUpdate(context)
+        val info = UpdateChecker.checkForUpdate(context)
+        UpdateManager.onUpdateChecked(info)
     }
 
     val filteredConversations = remember(conversations, searchQuery) {
@@ -127,6 +138,16 @@ fun HomeScreen(
             Icon(Icons.Filled.Add, contentDescription = "New chat", modifier = Modifier.size(28.dp))
         }
     }
+
+    UpdateDialog(
+        onDismiss = { UpdateManager.dismiss() },
+        onDownload = {
+            val updateInfo = (UpdateManager.state.value as? com.play4xw1n.msging.update.UpdateState.UpdateAvailable)?.info
+            if (updateInfo != null) {
+                UpdateManager.downloadUpdate(context, updateInfo.apkUrl)
+            }
+        }
+    )
 }
 
 @Composable
