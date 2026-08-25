@@ -10,3 +10,4 @@ build/
 *.log
 .kotlin/
 google-services.json
+release.keystore
