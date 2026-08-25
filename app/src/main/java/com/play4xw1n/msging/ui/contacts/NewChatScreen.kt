@@ -67,8 +67,8 @@ fun NewChatScreen(
     var searchQuery by remember { mutableStateOf("") }
 
     val filteredUsers = remember(users, searchQuery) {
-        if (searchQuery.isBlank()) users
-        else users.filter { it.name.contains(searchQuery, ignoreCase = true) }
+        if (searchQuery.isBlank()) emptyList()
+        else users.filter { it.name.equals(searchQuery, ignoreCase = true) }
     }
 
     fun startConversation(user: User) {
