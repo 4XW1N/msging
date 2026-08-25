@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>msging - Real-Time Chat App</title>
+<style>
+  :root {
+    --bg: #0e0e12;
+    --card: #16161e;
+    --border: #2a2a35;
+    --purple: #6C5CE7;
+    --purple-light: #a29bfe;
+    --green: #00b894;
+    --red: #e17055;
+    --text: #e8e8f0;
+    --text-dim: #8888a0;
+    --gradient: linear-gradient(135deg, #6C5CE7, #a29bfe);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+  nav {
+    position: fixed; top: 0; width: 100%; z-index: 100;
+    background: rgba(14,14,18,0.85); backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 2rem;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  nav .logo { font-size: 1.4rem; font-weight: 800; color: var(--purple-light); }
+  nav .logo span { color: var(--text); }
+  nav ul { list-style: none; display: flex; gap: 2rem; }
+  nav a { color: var(--text-dim); text-decoration: none; font-size: 0.9rem; transition: color 0.2s; }
+  nav a:hover { color: var(--purple-light); }
+  .hamburger { display: none; background: none; border: none; color: var(--text); font-size: 1.5rem; cursor: pointer; }
+
+  .hero {
+    min-height: 100vh; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; text-align: center;
+    padding: 6rem 2rem 4rem;
+    background: radial-gradient(ellipse at 50% 20%, rgba(108,92,231,0.15) 0%, transparent 60%);
+  }
+  .hero-badge {
+    display: inline-block; padding: 0.4rem 1rem; border-radius: 2rem;
+    background: rgba(108,92,231,0.15); border: 1px solid rgba(108,92,231,0.3);
+    color: var(--purple-light); font-size: 0.8rem; font-weight: 600;
+    margin-bottom: 1.5rem; letter-spacing: 0.05em;
+  }
+  .hero h1 { font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 800; margin-bottom: 1rem; }
+  .hero h1 .accent { background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero p { color: var(--text-dim); font-size: 1.15rem; max-width: 540px; margin-bottom: 2.5rem; }
+  .hero-icon {
+    width: 100px; height: 100px; border-radius: 28px; margin-bottom: 2rem;
+    background: var(--gradient); display: flex; align-items: center; justify-content: center;
+    font-size: 3rem; font-weight: 900; color: #fff; box-shadow: 0 20px 60px rgba(108,92,231,0.4);
+  }
+  .btn {
+    display: inline-block; padding: 0.9rem 2rem; border-radius: 12px;
+    text-decoration: none; font-weight: 600; font-size: 1rem; transition: all 0.2s;
+  }
+  .btn-primary { background: var(--gradient); color: #fff; box-shadow: 0 8px 30px rgba(108,92,231,0.3); }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(108,92,231,0.5); }
+  .btn-outline { border: 1px solid var(--border); color: var(--text-dim); margin-left: 1rem; }
+  .btn-outline:hover { border-color: var(--purple-light); color: var(--purple-light); }
+
+  section { padding: 6rem 2rem; max-width: 1100px; margin: 0 auto; }
+  .section-title { font-size: 2rem; font-weight: 800; text-align: center; margin-bottom: 0.5rem; }
+  .section-sub { color: var(--text-dim); text-align: center; margin-bottom: 3.5rem; font-size: 1.05rem; }
+
+  .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
+  .feature {
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 2rem; transition: all 0.3s;
+  }
+  .feature:hover { border-color: var(--purple); transform: translateY(-4px); box-shadow: 0 12px 40px rgba(108,92,231,0.15); }
+  .feature-icon { font-size: 2rem; margin-bottom: 1rem; }
+  .feature h3 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+  .feature p { color: var(--text-dim); font-size: 0.9rem; }
+
+  .stack-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;
+  }
+  .stack-item {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 1.2rem; text-align: center;
+  }
+  .stack-item .label { color: var(--text-dim); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.3rem; }
+  .stack-item .value { font-weight: 700; font-size: 1rem; }
+
+  .screenshots {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; align-items: center;
+  }
+  .phone-mock {
+    background: var(--card); border: 1px solid var(--border); border-radius: 24px;
+    padding: 2rem 1rem; text-align: center; aspect-ratio: 9/16;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+  }
+  .phone-mock .mock-icon { font-size: 3rem; margin-bottom: 1rem; }
+  .phone-mock .mock-label { color: var(--text-dim); font-size: 0.85rem; }
+
+  .cta {
+    text-align: center; padding: 5rem 2rem;
+    background: radial-gradient(ellipse at center, rgba(108,92,231,0.1) 0%, transparent 70%);
+  }
+  .cta h2 { font-size: 2.2rem; font-weight: 800; margin-bottom: 1rem; }
+
+  footer {
+    border-top: 1px solid var(--border); padding: 3rem 2rem; text-align: center;
+    color: var(--text-dim); font-size: 0.85rem;
+  }
+  footer a { color: var(--purple-light); text-decoration: none; }
+
+  @media (max-width: 768px) {
+    nav ul { display: none; }
+    nav ul.open { display: flex; flex-direction: column; position: absolute; top: 100%; left: 0; width: 100%; background: rgba(14,14,18,0.95); padding: 1rem 2rem 2rem; border-bottom: 1px solid var(--border); }
+    .hamburger { display: block; }
+    .screenshots { grid-template-columns: 1fr; }
+    .btn-outline { margin-left: 0; margin-top: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo"><span>msg</span>ing</div>
+  <button class="hamburger" onclick="document.querySelector('nav ul').classList.toggle('open')" aria-label="Menu">&#9776;</button>
+  <ul>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#stack">Tech Stack</a></li>
+    <li><a href="#screenshots">Preview</a></li>
+    <li><a href="terms.html">Terms</a></li>
+    <li><a href="privacy.html">Privacy</a></li>
+  </ul>
+</nav>
+
+<header class="hero">
+  <div class="hero-icon">M</div>
+  <div class="hero-badge">NOW AVAILABLE</div>
+  <h1>Meet <span class="accent">msging</span></h1>
+  <p>A modern real-time messaging app. Direct messages, group chats, email verification, and a sleek dark UI &mdash; built for privacy and speed.</p>
+  <div>
+    <a href="https://github.com/4XW1N/msging" class="btn btn-primary" target="_blank">View on GitHub</a>
+    <a href="#features" class="btn btn-outline">Learn More</a>
+  </div>
+</header>
+
+<section id="features">
+  <h2 class="section-title">Features</h2>
+  <p class="section-sub">Everything you need in a messaging app, nothing you don't.</p>
+  <div class="features">
+    <div class="feature">
+      <div class="feature-icon">&#9993;</div>
+      <h3>Direct Messaging</h3>
+      <p>One-on-one conversations with real-time delivery. See who's online, get instant notifications, and never miss a message.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">&#128101;</div>
+      <h3>Group Chats</h3>
+      <p>Create groups with multiple members. Give them a name, add people, and start chatting together instantly.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">&#128274;</div>
+      <h3>Email Verification</h3>
+      <p>Every account is verified via email. No bots, no spam &mdash; just real people having real conversations.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">&#127761;</div>
+      <h3>Dark Theme</h3>
+      <p>A carefully crafted dark UI with purple accents. Easy on the eyes, day or night.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">&#9889;</div>
+      <h3>Real-Time Sync</h3>
+      <p>Messages appear instantly across all devices. Powered by Firebase with sub-second delivery.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">&#128272;</div>
+      <h3>Secure by Design</h3>
+      <p>Firestore security rules ensure only you can access your messages. Data is encrypted in transit and at rest.</p>
+    </div>
+  </div>
+</section>
+
+<section id="stack">
+  <h2 class="section-title">Tech Stack</h2>
+  <p class="section-sub">Built with modern Android technologies.</p>
+  <div class="stack-grid">
+    <div class="stack-item"><div class="label">Language</div><div class="value">Kotlin</div></div>
+    <div class="stack-item"><div class="label">UI Framework</div><div class="value">Jetpack Compose</div></div>
+    <div class="stack-item"><div class="label">Backend</div><div class="value">Firebase</div></div>
+    <div class="stack-item"><div class="label">Database</div><div class="value">Cloud Firestore</div></div>
+    <div class="stack-item"><div class="label">Authentication</div><div class="value">Firebase Auth</div></div>
+    <div class="stack-item"><div class="label">Build System</div><div class="value">Gradle (Kotlin DSL)</div></div>
+    <div class="stack-item"><div class="label">Min SDK</div><div class="value">API 26 (Android 8)</div></div>
+    <div class="stack-item"><div class="label">Target SDK</div><div class="value">API 35 (Android 15)</div></div>
+  </div>
+</section>
+
+<section id="screenshots">
+  <h2 class="section-title">App Preview</h2>
+  <p class="section-sub">A clean, modern interface.</p>
+  <div class="screenshots">
+    <div class="phone-mock">
+      <div class="mock-icon">&#128274;</div>
+      <div class="mock-label">Login / Sign Up</div>
+    </div>
+    <div class="phone-mock">
+      <div class="mock-icon">&#128172;</div>
+      <div class="mock-label">Chat Screen</div>
+    </div>
+    <div class="phone-mock">
+      <div class="mock-icon">&#128101;</div>
+      <div class="mock-label">Group Creation</div>
+    </div>
+  </div>
+</section>
+
+<section class="cta">
+  <h2>Ready to start chatting?</h2>
+  <p style="color:var(--text-dim); margin-bottom:2rem;">Download the source code and build it yourself.</p>
+  <a href="https://github.com/4XW1N/msging" class="btn btn-primary" target="_blank">Get the Code</a>
+</section>
+
+<footer>
+  <p>&copy; 2026 msging &mdash; Built by <a href="https://github.com/4XW1N" target="_blank">4XW1N</a></p>
+  <p style="margin-top:0.5rem;">
+    <a href="terms.html">Terms of Service</a> &middot;
+    <a href="privacy.html">Privacy Policy</a> &middot;
+    <a href="https://github.com/4XW1N/msging/issues" target="_blank">Report a Bug</a>
+  </p>
+</footer>
+
+</body>
+</html>
